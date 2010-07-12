@@ -1,0 +1,3 @@
+Requires NLTK.
+
+Usage: python extract.py filename
