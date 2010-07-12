@@ -1,3 +1,5 @@
 Requires NLTK.
 
 Usage: python extract.py filename
+
+http://www.nltk.org/download
