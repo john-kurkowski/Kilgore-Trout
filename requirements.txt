@@ -1,0 +1,5 @@
+PyYAML==3.09
+argparse==1.2.1
+nltk==2.0.1rc1
+numpy==1.5.1
+wsgiref==0.1.2

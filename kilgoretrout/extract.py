@@ -1,7 +1,6 @@
 import logging
 import nltk
 import re
-import sys
 
 from collections import defaultdict
 from nltk.sem import relextract
@@ -213,12 +212,19 @@ class NECorpus:
 
 
 if __name__ == "__main__":
-    import doctest
-    doctest.testmod()
+    import argparse
+    parser = argparse.ArgumentParser(description='Extract person-location and person-GPE relationships.')
+    parser.add_argument('filename', help='filename to process')
+    parser.add_argument('--tests', dest='run_tests', help='run tests')
+    args = parser.parse_args()
     
     logging.basicConfig(level=logging.DEBUG)
+
+    if args.run_tests:
+      import doctest
+      doctest.testmod()
     
-    filename = sys.argv[1]
+    filename = args.filename
     f = open(filename)
     text = f.read()
     corpus = NECorpus(text)
