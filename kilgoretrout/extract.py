@@ -37,8 +37,8 @@ class NECorpus:
         sents = self.tokenize_sentences(text)
         sents = self.tokenize_words(sents)
         sents = self.tag_nes(sents)
-        self.__sents = sents
-        self.__postprocess()
+        self._sents = sents
+        self._postprocess()
 
 
     def tokenize_sentences(cls, text):
@@ -65,7 +65,7 @@ class NECorpus:
         return nes
     
     
-    def __postprocess(self):
+    def _postprocess(self):
         """Perform postprocessing techniques to increase accuracy and recall."""
         # normalize choices of NE throughout the text, e.g. if "Billy Flannigan"
         # is usually a PERSON, make him always a PERSON
@@ -85,10 +85,10 @@ class NECorpus:
             if len(choices) < 2:
                 continue
             
-            LOG.debug("Normalizing NE '%s' from choices %s" % (sym, str(choices)))
             pairs = ((count, choice) for choice, count in choices.iteritems())
             count, choice = max(pairs)
             normalized[sym] = choice
+            LOG.debug("Normalizing NE '%s' from choices %s => %s" % (sym, choices.items(), choice))
             
         for sentence_no, ne in nes:
             sym = symbolize(ne)
@@ -109,12 +109,12 @@ class NECorpus:
         >>> corpus.sents()
         ['The Project Gutenberg EBook of Ulysses , by James Joyce .', 'Use this with care .']
         """
-        return [self.rejoin_sent(sent) for sent in self.__sents]
+        return [self.rejoin_sent(sent) for sent in self._sents]
 
 
     def parsed_sents(self):
         """Get sentences as parsed, tokenized, and tagged by this corpus."""
-        return self.__sents
+        return self._sents
     
     
     def nes(self, nes=NE_TYPES):
@@ -124,7 +124,7 @@ class NECorpus:
             nes = [nes]
         nes = set(nes)
         result = []
-        for index, sent in enumerate(self.__sents):
+        for index, sent in enumerate(self._sents):
             for elem in sent:
                 try:
                     if elem.node in nes:
@@ -152,21 +152,21 @@ class NECorpus:
             nes = [nes]
         nes = set(nes)
         result = []
-        for sent in self.__sents:
-            if match_all and self.__contains_all_nodes(sent, nes):
+        for sent in self._sents:
+            if match_all and self._contains_all_nodes(sent, nes):
                 result.append(sent) 
-            elif not match_all and self.__contains_any_node(sent, nes):
+            elif not match_all and self._contains_any_node(sent, nes):
                 result.append(sent)
                 
         return result
     
     
-    def __contains_all_nodes(cls, tree, nodes):
+    def _contains_all_nodes(cls, tree, nodes):
         nes = set(iter_nodes(tree))
         return len(nodes.intersection(nes)) == len(nodes)
     
     
-    def __contains_any_node(cls, tree, nodes):
+    def _contains_any_node(cls, tree, nodes):
         nes = set(iter_nodes(tree))
         return len(nodes.intersection(nes)) > 0
 
@@ -174,15 +174,15 @@ class NECorpus:
     def extract_rels(self, subj, obj):
         """Extract relationships of the given named entity subj and obj
         type."""
-        return self.__naive_extract(subj, obj)
+        return self._naive_extract(subj, obj)
 
 
-    def __naive_extract(self, subj, obj):
+    def _naive_extract(self, subj, obj):
         """Get sentences containing both subj and obj named entities."""
         # Duplicating self.ne_parsed_sents([subj, obj]) ...
         cond = set((subj, obj))
         result = []
-        for index, sent in enumerate(self.__sents):
+        for index, sent in enumerate(self._sents):
             nes = [elem for elem in sent if hasattr(elem, 'node')]
             nodes = set(elem.node for elem in nes)
             if nodes.intersection(cond) == cond: 
@@ -192,12 +192,12 @@ class NECorpus:
         return result
     
 
-    def __nltk_extract(self, subj, obj):
+    def _nltk_extract(self, subj, obj):
         """Use NLTK's built-in relationship extractor to get subj and obj
         named entity relationships and context."""
         re_location = re.compile(".*")
         result = []
-        for sent in self.__sents:
+        for sent in self._sents:
             extraction = relextract.extract_rels(
                 subj,
                 obj,
