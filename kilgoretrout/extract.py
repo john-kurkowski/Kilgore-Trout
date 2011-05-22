@@ -1,9 +1,9 @@
+from collections import defaultdict
 import logging
 import nltk
-import re
-
-from collections import defaultdict
 from nltk.sem import relextract
+import operator
+import re
 
 LOG = logging.getLogger(__name__)
 
@@ -34,10 +34,9 @@ def iter_nodes(tree):
 
 class NECorpus: 
     def __init__(self, text):
-        sents = self.tokenize_sentences(text)
-        sents = self.tokenize_words(sents)
-        sents = self.tag_nes(sents)
-        self._sents = sents
+        self._sents = self.tokenize_sentences(text)
+        self._sents = self.tokenize_words(self._sents)
+        self._sents = self.tag_nes(self._sents)
         self._postprocess()
 
 
@@ -85,8 +84,7 @@ class NECorpus:
             if len(choices) < 2:
                 continue
             
-            pairs = ((count, choice) for choice, count in choices.iteritems())
-            count, choice = max(pairs)
+            choice, _ = max(choices.iteritems(), key=operator.itemgetter(1))
             normalized[sym] = choice
             LOG.debug("Normalizing NE '%s' from choices %s => %s" % (sym, choices.items(), choice))
             
@@ -151,24 +149,18 @@ class NECorpus:
         if is_single_item(nes):
             nes = [nes]
         nes = set(nes)
-        result = []
-        for sent in self._sents:
-            if match_all and self._contains_all_nodes(sent, nes):
-                result.append(sent) 
-            elif not match_all and self._contains_any_node(sent, nes):
-                result.append(sent)
-                
-        return result
+        filterfn = self._contains_all_nodes if match_all else self._contains_any_node
+        return [sent for sent in self._sents if filterfn(sent, nes)]
     
     
     def _contains_all_nodes(cls, tree, nodes):
         nes = set(iter_nodes(tree))
-        return len(nodes.intersection(nes)) == len(nodes)
+        return nodes.issuperset(nes)
     
     
     def _contains_any_node(cls, tree, nodes):
         nes = set(iter_nodes(tree))
-        return len(nodes.intersection(nes)) > 0
+        return nodes.intersection(nes)
 
 
     def extract_rels(self, subj, obj):
@@ -185,7 +177,7 @@ class NECorpus:
         for index, sent in enumerate(self._sents):
             nes = [elem for elem in sent if hasattr(elem, 'node')]
             nodes = set(elem.node for elem in nes)
-            if nodes.intersection(cond) == cond: 
+            if cond.issubset(nodes): 
                 matching_nes = [elem for elem in nes if elem.node in cond]
                 result.append((index, matching_nes))
                 
@@ -214,18 +206,26 @@ class NECorpus:
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description='Extract person-location and person-GPE relationships.')
-    parser.add_argument('filename', help='filename to process')
-    parser.add_argument('--tests', dest='run_tests', help='run tests')
+    parser.add_argument('filename', nargs='?', help='filename to process')
+    parser.add_argument('--tests', dest='run_tests', action='store_true', help='run tests')
     args = parser.parse_args()
     
     logging.basicConfig(level=logging.DEBUG)
 
+    did_something = False
+
     if args.run_tests:
+      did_something = True
       import doctest
       doctest.testmod()
+
+    if not args.filename:
+      if not did_something:
+        parser.print_usage()
+      import sys
+      sys.exit()
     
-    filename = args.filename
-    f = open(filename)
+    f = open(args.filename)
     text = f.read()
     corpus = NECorpus(text)
     a = corpus.extract_rels('PERSON', 'LOCATION')
