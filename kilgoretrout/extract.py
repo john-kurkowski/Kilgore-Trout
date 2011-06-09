@@ -1,9 +1,11 @@
+import argparse
 from collections import defaultdict
 import logging
 import nltk
 from nltk.sem import relextract
 import operator
 import re
+import sys
 
 LOG = logging.getLogger(__name__)
 
@@ -204,9 +206,8 @@ class NECorpus:
 
 
 if __name__ == "__main__":
-    import argparse
     parser = argparse.ArgumentParser(description='Extract person-location and person-GPE relationships.')
-    parser.add_argument('filename', nargs='?', help='filename to process')
+    parser.add_argument('infile', nargs='?', type=argparse.FileType('r'), help='filename to process, or - for stdin')
     parser.add_argument('--tests', dest='run_tests', action='store_true', help='run tests')
     args = parser.parse_args()
     
@@ -219,14 +220,12 @@ if __name__ == "__main__":
       import doctest
       doctest.testmod()
 
-    if not args.filename:
+    text = args.infile.read() if args.infile else ''
+    if not text:
       if not did_something:
         parser.print_usage()
-      import sys
       sys.exit()
     
-    f = open(args.filename)
-    text = f.read()
     corpus = NECorpus(text)
     a = corpus.extract_rels('PERSON', 'LOCATION')
     b = corpus.extract_rels('PERSON', 'GPE')
